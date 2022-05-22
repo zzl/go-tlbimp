@@ -1047,7 +1047,7 @@ func (this *Generator) genCoClass(ti *typelib.TypeInfo) {
 	if sourceTi != nil {
 		sourceClass := utils.CapName(sourceTi.Name)
 		code += "func (this *" + className + ") " +
-			"RegisterEventHandlers(handlers " + sourceClass + "Handlers) {\n"
+			"RegisterEventHandlers(handlers " + sourceClass + "Handlers) uint32 {\n"
 		code += "\tvar cpc *win32.IConnectionPointContainer\n"
 		code += "\thr := this.QueryInterface(&win32.IID_IConnectionPointContainer, unsafe.Pointer(&cpc))\n"
 		code += "\twin32.ASSERT_SUCCEEDED(hr)\n"
@@ -1064,6 +1064,24 @@ func (this *Generator) genCoClass(ti *typelib.TypeInfo) {
 		code += "\twin32.ASSERT_SUCCEEDED(hr)\n"
 		code += "\n"
 		code += "\tdisp.Release()\n"
+		code += "\tcp.Release()\n"
+		code += "\tcpc.Release()\n"
+		code += "\treturn cookie\n"
+		code += "}\n\n"
+
+		code += "func (this *" + className + ") " +
+			"UnRegisterEventHandlers(cookie uint32) {\n"
+		code += "\tvar cpc *win32.IConnectionPointContainer\n"
+		code += "\thr := this.QueryInterface(&win32.IID_IConnectionPointContainer, unsafe.Pointer(&cpc))\n"
+		code += "\twin32.ASSERT_SUCCEEDED(hr)\n"
+		code += "\n"
+		code += "\tvar cp *win32.IConnectionPoint\n"
+		code += "\thr = cpc.FindConnectionPoint(&IID_" + sourceClass + ", &cp)\n"
+		code += "\twin32.ASSERT_SUCCEEDED(hr)\n"
+		code += "\n"
+		code += "\thr = cp.Unadvise(cookie)\n"
+		code += "\twin32.ASSERT_SUCCEEDED(hr)\n"
+		code += "\n"
 		code += "\tcp.Release()\n"
 		code += "\tcpc.Release()\n"
 		code += "}\n\n"
