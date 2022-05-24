@@ -52,8 +52,8 @@ func NewParamInfo(pTypeInfo *win32.ITypeInfo, pFuncDesc *win32.FUNCDESC,
 	if idlFlags&win32.IDLFLAG_FRETVAL != 0 {
 		info.Flags.Retval = true
 	}
-	if pFuncDesc.CParamsOpt == -1 && index == int(pFuncDesc.CParams-1) ||
-		index >= cParams-int(pFuncDesc.CParamsOpt) {
+
+	if idlFlags&win32.PARAMFLAG_FOPT != 0 {
 		info.Flags.Optional = true
 	}
 

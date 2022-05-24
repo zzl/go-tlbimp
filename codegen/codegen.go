@@ -362,6 +362,10 @@ func (this *Generator) genDispInterface(ti *typelib.TypeInfo) {
 	code += "}\n\n"
 
 	code += "func New" + className + "(pDisp *win32.IDispatch, addRef bool, scoped bool) *" + className + " {\n"
+	code += "\t if pDisp == nil {\n"
+	code += "\t\treturn nil;\n"
+	code += "\t}\n"
+
 	code += "\tp := &" + className + "{ole.OleClient{pDisp}}\n"
 	code += "\tif addRef {\n"
 	code += "\t\tpDisp.AddRef()\n"
@@ -374,7 +378,7 @@ func (this *Generator) genDispInterface(ti *typelib.TypeInfo) {
 
 	//
 	code += "func " + className + "FromVar(v ole.Variant) *" + className + " {\n"
-	code += "\treturn New" + className + "(v.PdispValVal(), false, false)\n"
+	code += "\treturn New" + className + "(v.IDispatch(), false, false)\n"
 	code += "}\n\n"
 
 	//
@@ -764,13 +768,16 @@ func (this *Generator) genDispMethod(f *typelib.FuncInfo, className string,
 
 	fName := utils.CapName(f.Name)
 
+	var propSet bool
 	switch methodType {
 	case "PropGet":
 		//
 	case "PropPut":
 		fName = "Set" + fName
+		propSet = true
 	case "PropPutRef":
 		fName = "Set" + fName
+		propSet = true
 	case "Call":
 		if setMethods[fName] {
 			fName += "_"
@@ -834,7 +841,12 @@ func (this *Generator) genDispMethod(f *typelib.FuncInfo, className string,
 		code += "\toptArgs = ole.ProcessOptArgs(" + optArgsVarName + ", optArgs)\n"
 	}
 
-	code += "\tretVal := this." + methodType + "(" + sDispId
+	if propSet {
+		code += "\t_ = this." + methodType + "(" + sDispId
+	} else {
+		code += "\tretVal, _ := this." + methodType + "(" + sDispId
+	}
+
 	if reqParamNames != nil {
 		code += ", []interface{}{" + strings.Join(reqParamNames, ", ") + "}"
 	} else {
@@ -847,11 +859,13 @@ func (this *Generator) genDispMethod(f *typelib.FuncInfo, className string,
 
 	//
 	if goReturnType == "ole.Variant" {
-		code += "\tcom.CurrentScope.AddVarIfNeeded((*win32.VARIANT)(retVal))\n"
+		code += "\tcom.AddToScope(retVal)\n"
 	}
 
 	//
-	code += "\t" + this.genDispReturnCode(f.ReturnType, goReturnType) + "\n"
+	if !propSet {
+		code += "\t" + this.genDispReturnCode(f.ReturnType, goReturnType) + "\n"
+	}
 	code += "}\n\n"
 	return code
 }
@@ -880,9 +894,9 @@ func (this *Generator) mapOleTypeToGoType(varType *typelib.VarType, forReturn bo
 		goType = "time.Time"
 	} else if oleType == "win32.HRESULT" {
 		goType = "com.Error"
-	} else if oleType == "*win32.IUnknown" {
+	} else if oleType == "*win32.IUnknown" && forReturn {
 		goType = "*com.UnknownClass"
-	} else if oleType == "*win32.IDispatch" {
+	} else if oleType == "*win32.IDispatch" && forReturn {
 		goType = "*ole.DispatchClass"
 	} else if oleType == "win32.PWSTR" {
 		goType = "string"
@@ -893,11 +907,17 @@ func (this *Generator) mapOleTypeToGoType(varType *typelib.VarType, forReturn bo
 		if this.refClassMap[oleType[1:]] != "" {
 			this.usedRefClassMap[oleType[1:]] = this.refClassMap[oleType[1:]]
 			goType = oleType //
-		} else {
+		} else if forReturn {
 			if varType.RefType.DispInterface {
 				goType = "*ole.DispatchClass"
 			} else {
 				goType = "*com.UnknownClass"
+			}
+		} else {
+			if varType.RefType.DispInterface {
+				goType = "*win32.IDispatch"
+			} else {
+				goType = "*win32.IUnknown"
 			}
 		}
 	} else if varType.Pointer && varType.RefType.Pointer &&
@@ -906,11 +926,17 @@ func (this *Generator) mapOleTypeToGoType(varType *typelib.VarType, forReturn bo
 		if this.refClassMap[oleType[2:]] != "" {
 			this.usedRefClassMap[oleType[2:]] = this.refClassMap[oleType[2:]]
 			goType = oleType //
-		} else {
+		} else if forReturn {
 			if varType.RefType.DispInterface {
 				goType = "**ole.DispatchClass"
 			} else {
 				goType = "**com.UnknownClass"
+			}
+		} else {
+			if varType.RefType.DispInterface {
+				goType = "**win32.IDispatch"
+			} else {
+				goType = "**win32.IUnknown"
 			}
 		}
 	} else {
@@ -938,9 +964,9 @@ func (this *Generator) genDispReturnCode(varType *typelib.VarType, goType string
 			if goType == "*com.UnknownClass" {
 				return "return com.NewUnknownClass(retVal.PunkValVal(), true)"
 			} else if goType == "*ole.DispatchClass" {
-				return "return ole.NewDispatchClass(retVal.PdispValVal(), true)"
+				return "return ole.NewDispatchClass(retVal.IDispatch(), true)"
 			} else if varType.RefType.DispInterface {
-				return "return New" + goType[1:] + "(retVal.PdispValVal(), false, true)"
+				return "return New" + goType[1:] + "(retVal.IDispatch(), false, true)"
 			} else {
 				return "return New" + goType[1:] + "(retVal.PunkValVal(), false, true)"
 			}
@@ -988,6 +1014,10 @@ func (this *Generator) genCoClass(ti *typelib.TypeInfo) {
 
 	if implTi.DispInterface {
 		code += "func New" + className + "(pDisp *win32.IDispatch, addRef bool, scoped bool) *" + className + " {\n"
+		code += "\t if pDisp == nil {\n"
+		code += "\t\treturn nil;\n"
+		code += "\t}\n"
+
 		code += "\tp := &" + className + "{" + implClass + "{ole.OleClient{pDisp}}}\n"
 
 		code += "\tif addRef {\n"
@@ -1006,10 +1036,13 @@ func (this *Generator) genCoClass(ti *typelib.TypeInfo) {
 
 		//
 		code += "func New" + className + "FromVar(v ole.Variant, addRef bool, scoped bool) *" + className + " {\n"
-		code += "\treturn New" + className + "(v.PdispValVal(), addRef, scoped)\n"
+		code += "\treturn New" + className + "(v.IDispatch(), addRef, scoped)\n"
 		code += "}\n\n"
 	} else {
 		code += "func New" + className + "(pUnk *win32.IUnknown, addRef bool, scoped bool) *" + className + " {\n"
+		code += "\t if pUnk == nil {\n"
+		code += "\t\treturn nil;\n"
+		code += "\t}\n"
 		code += "\tp := (*" + className + ")(unsafe.Pointer(pUnk))\n"
 		code += "\tif addRef {\n"
 		code += "\t\tpUnk.AddRef()\n"
@@ -1114,6 +1147,9 @@ func (this *Generator) genInterface(ti *typelib.TypeInfo) {
 	code += "}\n\n"
 
 	code += "func New" + className + "(pUnk *win32.IUnknown, addRef bool, scoped bool) *" + className + " {\n"
+	code += "\t if pUnk == nil {\n"
+	code += "\t\treturn nil;\n"
+	code += "\t}\n"
 	code += "\tp := (*" + className + ")(unsafe.Pointer(pUnk))\n"
 
 	code += "\tif addRef {\n"
@@ -1539,14 +1575,8 @@ func (this *Generator) genFunc(className string, fName string, fIndex int,
 		}
 	}
 	code += ")\n"
-	if outInterfaceParams != nil {
-		code += "\tif com.CurrentScope != nil {\n"
-	}
 	for _, outParam := range outInterfaceParams {
-		code += "\t\tcom.CurrentScope.Add(unsafe.Pointer(&(*" + outParam + ").IUnknown))\n"
-	}
-	if outInterfaceParams != nil {
-		code += "\t}\n"
+		code += "\t\tcom.AddToScope(" + outParam + ")\n"
 	}
 	if goReturnType != "" {
 		code += "\t" + this.genReturnCode(returnType, goReturnType) + "\n"
