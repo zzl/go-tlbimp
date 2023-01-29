@@ -2,7 +2,7 @@ package typelib
 
 import (
 	"github.com/zzl/go-com/com"
-	"github.com/zzl/go-win32api/win32"
+	"github.com/zzl/go-win32api/v2/win32"
 	"unsafe"
 )
 
@@ -43,10 +43,10 @@ func NewFuncInfo(pTypeInfo *win32.ITypeInfo, pTypeAttr *win32.TYPEATTR,
 	info.Flags.PropGet = pFuncDesc.Invkind&win32.INVOKE_PROPERTYGET != 0
 	info.Flags.PropPut = pFuncDesc.Invkind&win32.INVOKE_PROPERTYPUT != 0
 	info.Flags.PropPutRef = pFuncDesc.Invkind&win32.INVOKE_PROPERTYPUTREF != 0
-	if pFuncDesc.WFuncFlags&uint16(win32.FUNCFLAG_FRESTRICTED) != 0 {
+	if pFuncDesc.WFuncFlags&win32.FUNCFLAG_FRESTRICTED != 0 {
 		info.Flags.Restricted = true
 	}
-	if pFuncDesc.WFuncFlags&uint16(win32.FUNCFLAG_FHIDDEN) != 0 {
+	if pFuncDesc.WFuncFlags&win32.FUNCFLAG_FHIDDEN != 0 {
 		info.Flags.Hidden = true
 	}
 	if pFuncDesc.CParamsOpt == -1 {
@@ -82,7 +82,7 @@ func NewFuncInfo(pTypeInfo *win32.ITypeInfo, pTypeAttr *win32.TYPEATTR,
 	if dispFunc {
 		for n := 0; n < cParams; n++ {
 			pParamDesc := elemDescParams[n]
-			idlFlags := uint32(pParamDesc.IdldescVal().WIDLFlags)
+			idlFlags := pParamDesc.IdldescVal().WIDLFlags
 			if idlFlags&win32.IDLFLAG_FLCID != 0 || idlFlags&win32.IDLFLAG_FRETVAL != 0 {
 				cParams = n
 				break

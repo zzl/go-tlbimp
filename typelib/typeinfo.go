@@ -2,7 +2,7 @@ package typelib
 
 import (
 	"github.com/zzl/go-com/com"
-	"github.com/zzl/go-win32api/win32"
+	"github.com/zzl/go-win32api/v2/win32"
 	"syscall"
 )
 
@@ -192,7 +192,7 @@ func NewTypeInfo(p *win32.ITypeInfo) *TypeInfo {
 	//
 	if info.Kind == win32.TKIND_COCLASS {
 
-		var implType int32
+		var implType win32.IMPLTYPEFLAGS
 		var hRefType win32.HREFTYPE
 		var ptiImpl *win32.ITypeInfo
 		var bsName com.BStr
@@ -218,8 +218,8 @@ func NewTypeInfo(p *win32.ITypeInfo) *TypeInfo {
 			intf := &ImplType{
 				Name:          bsName.ToStringAndFree(),
 				Guid:          pImplAttr.Guid,
-				Default:       implType&int32(win32.IMPLTYPEFLAG_FDEFAULT) != 0,
-				Source:        implType&int32(win32.IMPLTYPEFLAG_FSOURCE) != 0,
+				Default:       implType&win32.IMPLTYPEFLAG_FDEFAULT != 0,
+				Source:        implType&win32.IMPLTYPEFLAG_FSOURCE != 0,
 				DispInterface: pImplAttr.Typekind == win32.TKIND_DISPATCH,
 			}
 

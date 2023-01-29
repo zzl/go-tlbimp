@@ -1,7 +1,7 @@
 package typelib
 
 import (
-	"github.com/zzl/go-win32api/win32"
+	"github.com/zzl/go-win32api/v2/win32"
 	"strings"
 )
 
@@ -42,7 +42,7 @@ func NewParamInfo(pTypeInfo *win32.ITypeInfo, pFuncDesc *win32.FUNCDESC,
 		Name: name,
 	}
 
-	idlFlags := uint32(pParamDesc.IdldescVal().WIDLFlags)
+	idlFlags := pParamDesc.IdldescVal().WIDLFlags
 	if idlFlags&win32.IDLFLAG_FIN != 0 {
 		info.Flags.In = true
 	}
@@ -53,7 +53,7 @@ func NewParamInfo(pTypeInfo *win32.ITypeInfo, pFuncDesc *win32.FUNCDESC,
 		info.Flags.Retval = true
 	}
 
-	if idlFlags&win32.PARAMFLAG_FOPT != 0 {
+	if win32.PARAMFLAGS(idlFlags)&win32.PARAMFLAG_FOPT != 0 {
 		info.Flags.Optional = true
 	}
 

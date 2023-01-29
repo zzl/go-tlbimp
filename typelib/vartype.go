@@ -3,7 +3,7 @@ package typelib
 import (
 	"github.com/zzl/go-com/com"
 	"github.com/zzl/go-tlbimp/utils"
-	"github.com/zzl/go-win32api/win32"
+	"github.com/zzl/go-win32api/v2/win32"
 	"strconv"
 	"strings"
 	"syscall"
@@ -272,7 +272,7 @@ func _newVarType(pTypeInfo *win32.ITypeInfo, pTypeDesc *win32.TYPEDESC,
 			var pta *win32.TYPEATTR
 			ptiRef.GetTypeAttr(&pta)
 			for n := uint32(0); n < uint32(pta.CImplTypes); n++ {
-				var implType int32
+				var implType win32.IMPLTYPEFLAGS
 				hr = ptiRef.GetImplTypeFlags(n, &implType)
 				win32.ASSERT_SUCCEEDED(hr)
 				var hRefType win32.HREFTYPE
@@ -283,8 +283,8 @@ func _newVarType(pTypeInfo *win32.ITypeInfo, pTypeDesc *win32.TYPEDESC,
 				win32.ASSERT_SUCCEEDED(hr)
 				var ptaImpl *win32.TYPEATTR
 				ptiImpl.GetTypeAttr(&ptaImpl)
-				if implType&int32(win32.IMPLTYPEFLAG_FDEFAULT) != 0 &&
-					implType&int32(win32.IMPLTYPEFLAG_FSOURCE) == 0 {
+				if implType&win32.IMPLTYPEFLAG_FDEFAULT != 0 &&
+					implType&win32.IMPLTYPEFLAG_FSOURCE == 0 {
 					t.DispInterface = ptaImpl.Typekind == win32.TKIND_DISPATCH
 				}
 				ptiImpl.ReleaseTypeAttr(ptaImpl)

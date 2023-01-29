@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"github.com/zzl/go-tlbimp/typelib"
 	"github.com/zzl/go-tlbimp/utils"
-	"github.com/zzl/go-win32api/win32"
+	"github.com/zzl/go-win32api/v2/win32"
 	"io/ioutil"
 	"os"
 	"path"
@@ -157,7 +157,7 @@ func (this *Generator) cleanOutputDir() {
 func genImports(code string) string {
 	var imports string
 	if strings.Contains(code, "win32") {
-		imports += "\t\"github.com/zzl/go-win32api/win32\"\n"
+		imports += "\t\"github.com/zzl/go-win32api/v2/win32\"\n"
 	}
 	if strings.Contains(code, "com.") {
 		imports += "\t\"github.com/zzl/go-com/com\"\n"
@@ -225,7 +225,6 @@ func (this *Generator) genAlias(ti *typelib.TypeInfo) {
 	this.codeMap["types"] = code
 }
 
-//
 type simpleFieldInfo struct {
 	name string
 	typ  string
@@ -548,7 +547,7 @@ func (this *Generator) genSourceDispInterface(ti *typelib.TypeInfo) {
 
 	code += "func (this *" + implClass + ") Invoke(" +
 		"dispIdMember int32, riid *syscall.GUID, lcid uint32,\n"
-	code += "\twFlags uint16, pDispParams *win32.DISPPARAMS, pVarResult *win32.VARIANT,\n"
+	code += "\twFlags win32.DISPATCH_FLAGS, pDispParams *win32.DISPPARAMS, pVarResult *win32.VARIANT,\n"
 	code += "\tpExcepInfo *win32.EXCEPINFO, puArgErr *uint32) win32.HRESULT {\n"
 
 	code += "\tvar unwrapActions ole.Actions\n"
@@ -1196,7 +1195,6 @@ func (this *Generator) genInterface(ti *typelib.TypeInfo) {
 	this.codeMap[className] = code
 }
 
-//
 func (this *Generator) genHandlerInterface(ti *typelib.TypeInfo) {
 	class := utils.CapName(ti.Name)
 	superClass := utils.CapName(ti.Super.Name)
@@ -1452,7 +1450,6 @@ func (this *Generator) genHandlerInterface(ti *typelib.TypeInfo) {
 	this.codeMap[class] = code
 }
 
-//
 func collectInheritedFuncs(superTi *typelib.TypeInfo) []*typelib.FuncInfo {
 	var funcs []*typelib.FuncInfo
 	if superTi.Super != nil {
